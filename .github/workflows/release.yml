@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: Checkout the repository
         uses: actions/checkout@master
-      - uses: mihails-strasuns/setup-dlang@v0.3.0
+      - uses: mihails-strasuns/setup-dlang@v0.4.1
         with:
           compiler: ldc-1.18.0
       - name: Build
