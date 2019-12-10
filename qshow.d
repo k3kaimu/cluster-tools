@@ -59,15 +59,86 @@ auto jobSort(R)(R r)
 }
 
 
-void main()
+void writeHyphen(Writer)(auto ref Writer writer, const(char)[] fmt)
 {
+    auto fmtspec = FormatSpec!char(fmt);
+
+    while(fmtspec.writeUpToNextSpec(writer)) {
+        size_t width;
+        if(fmtspec.nested) {
+            auto nestedFmtSpec = FormatSpec!char(fmtspec.nested);
+            nestedFmtSpec.writeUpToNextSpec(writer);
+            width = nestedFmtSpec.width;
+        }
+        else
+            width = fmtspec.width;
+
+        foreach(i; 0 .. width)
+            .put(writer, '-');
+    }
+}
+
+
+void writeValues(Writer, T...)(auto ref Writer writer, bool leftalign, const(char)[] fmt, T args)
+{
+    auto fmtspec = FormatSpec!char(fmt);
+
+    while(fmtspec.writeUpToNextSpec(writer)) {
+        Lswitch: switch(fmtspec.indexStart) {
+          static foreach(i, arg; args) {
+            case i+1:
+                static if(!isArray!(typeof(arg))) fmtspec.flDash = leftalign;
+                formatValue(writer, arg, fmtspec);
+                break Lswitch;
+          }
+
+            default:
+                enforce("フォーマットにインデックス指定がありません");
+        }
+    }
+}
+
+
+immutable defaultShowNodesFmt = "%1$6s  %2$5s  %3$9s  %4$11s  %5$3s  %6$-(%10s, %)";
+immutable defaultShowUsersFmt = "%1$10s  %2$4s  %3$4s  %4$8s  %5$4s  %6$4s  %7$8s";
+immutable defaultShowJobsFmt =  "%1$10s  %2$10s  %3$1s  %4$4s  %5$8s  %6$8s  %7$8s  %8$6s  %9$10s  %10$10s";
+
+
+void main(string[] args)
+{
+    bool showNodes, showUsers, showJobs, showOnlyMyJobs, showColored;
+    string fmtShowNode = defaultShowNodesFmt;
+    string fmtShowUsers = defaultShowUsersFmt;
+    string fmtShowJobs = defaultShowJobsFmt;
+    auto helpInformation = getopt(
+        args,
+        "n|node",   "ノードの情報を表示する",   &showNodes,
+        "nodefmt",  "ノード情報を表示する際のフォーマット指定．デフォルト値：" ~ defaultShowNodesFmt,
+                                            &fmtShowNode,
+        "u|user",   "ユーザの情報を表示する",   &showUsers,
+        "userfmt",  "ユーザ情報を表示する際のフォーマット指定．デフォルト値：" ~ defaultShowUsersFmt,
+                                            &fmtShowUsers,
+        "j|job",    "ジョブの情報を表示する",   &showJobs,
+        "jobfmt",   "ジョブ情報を表示する際のフォーマット指定．デフォルト値：" ~ defaultShowJobsFmt,
+                                            &fmtShowJobs,
+        "m|mine",   "自身のジョブのみ表示する", &showOnlyMyJobs,
+        "c|color",  "色付きで表示する",         &showColored);    // enum
+
+    if(helpInformation.helpWanted || (!showNodes && !showUsers && !showJobs)) {
+        defaultGetoptPrinter("pbsnodesやqstatから得られるクラスタ計算機の情報を表示します",
+            helpInformation.options);
+
+        return;
+    }
+
+
     auto pbsnodesResult = execute(["pbsnodes", "-aSj", "-F", "json"]);
     enforce(pbsnodesResult.status == 0, "`pbsnodes -aSj` is failed.");
 
     auto nodeList = pbsnodesResult.output.parseJSON()["nodes"].object.byKeyValue.map!((a){
         a.value["key"] = a.key;
         return a.value;
-    }).array().sort!q{a["key"].str < b["key"].str};
+    }).array().sort!q{a["key"].str < b["key"].str}.array();
 
     auto qstatResult = execute(["qstat", "-ft", "-F", "json"]);
     enforce(qstatResult.status == 0, "`qstat -ft -F json` is failed.");
@@ -78,73 +149,98 @@ void main()
     }).removeArrayJobParent.array();
 
 
-    // Show nodes
-    {
-        writeln("vnode\tnjobs\tncpus f/t\tmem f/t\t\tgpu\tusers");
-        writeln("-----\t-----\t---------\t-----------\t---\t-----");
-        foreach(node; nodeList) {
-            auto name = node["key"].str;
-            auto jobids = node["jobs"].array.map!(a => a.str.replace(".xregistry0", "")).array().sort.uniq.array();
-            auto njob = jobids.length;
-            auto mem = node["mem f/t"].str;
-            auto ncpus = node["ncpus f/t"].str;
-            auto ngpus = node["ngpus f/t"].str;
-
-            long[string] userCPUs;
-            foreach(jobid; jobids) {
-                auto r = jobList.find!(a => a["key"].str == jobid);
-                if(r.empty) continue;
-
-                auto jobinfo = r.front;
-                auto user = r.front["Variable_List"]["PBS_O_LOGNAME"].str;
-
-                if(user !in userCPUs)
-                    userCPUs[user] = 0;
-
-                if(jobinfo["Resource_List"]["nodect"].integer == 1 && jobinfo["Resource_List"]["nodes"].integer == 1) {
-                    userCPUs[user] += jobinfo["Resource_List"]["ncpus"].integer;
-                } else {
-                    // MPIなどで複数ノードにまたがるジョブの処理
-                    // exec_vnodeには (xsnd03:mem=1234kb:ncpus=1)+(xsnd04:mem=1234kb:ncpus=1)+(xsnd07:mem=1234kb:ncpus=1)+(xsnd08:mem=1234kb:ncpus=1)
-                    // のような値が入っているのでこれを集計する
-                    auto resourceList = jobinfo["exec_vnode"].str.split("+").map!"a[1..$-1]".find!(a => a.startsWith(name));
-                    if(resourceList.empty)
-                        continue;
-
-                    auto resources = resourceList.front.split(":");
-                    auto ncpus_f = resources.find!(a => a.startsWith("ncpus="));
-                    if(ncpus_f.empty){
-                        userCPUs[user] += 1;
-                        continue;
-                    }
-
-                    userCPUs[user] += ncpus_f.front[6 .. $].to!int;  // remove "ncpus=" and convert to int
-                }
-            }
-
-            auto usercpus = userCPUs.byKeyValue.map!q{format!"%7s*%2s"(a.key, a.value)}.array();
-
-            auto fmt = "%6s\t%5s\t%9s\t%11s\t%3s\t%-(%s, %)";
-            if(ncpus.startsWith("0/") || mem.startsWith("0gb")) {
-                fmt = fmt.color(fg.red);
-            }
-            cwritefln(fmt, name, njob, ncpus, mem, ngpus, usercpus);
-        }
+    if(showNodes) {
+        showNodeInfo(nodeList, jobList, fmtShowNode, showColored);
+        writeln();
     }
 
+    if(showUsers) {
+        showUserInfo(nodeList, jobList, fmtShowUsers, showColored);
+        writeln();
+    }
+
+    if(showJobs) {
+        showJobInfo(nodeList, jobList, fmtShowJobs, showOnlyMyJobs, showColored);
+        writeln();
+    }
+}
+
+
+void showNodeInfo(in JSONValue[] nodeList, in JSONValue[] jobList, string fmtstr, bool showColored)
+{
+    writeValues(stdout.lockingTextWriter, true, fmtstr, "vnode", "njobs", "ncpus f/t", "mem f/t", "gpu", ["users"]);
+    writeln();
+    writeHyphen(stdout.lockingTextWriter, fmtstr);
     writeln();
 
+    foreach(node; nodeList) {
+        auto name = node["key"].str;
+        auto jobids = node["jobs"].array.map!(a => a.str.replace(".xregistry0", "")).array().sort.uniq.array();
+        auto njob = jobids.length;
+        auto mem = node["mem f/t"].str;
+        auto ncpus = node["ncpus f/t"].str;
+        auto ngpus = node["ngpus f/t"].str;
 
+        long[string] userCPUs;
+        foreach(jobid; jobids) {
+            auto r = jobList.find!(a => a["key"].str == jobid);
+            if(r.empty) continue;
+
+            auto jobinfo = r.front;
+            auto user = r.front["Variable_List"]["PBS_O_LOGNAME"].str;
+
+            if(user !in userCPUs)
+                userCPUs[user] = 0;
+
+            if(jobinfo["Resource_List"]["nodect"].integer == 1 && jobinfo["Resource_List"]["nodes"].integer == 1) {
+                userCPUs[user] += jobinfo["Resource_List"]["ncpus"].integer;
+            } else {
+                // MPIなどで複数ノードにまたがるジョブの処理
+                // exec_vnodeには (xsnd03:mem=1234kb:ncpus=1)+(xsnd04:mem=1234kb:ncpus=1)+(xsnd07:mem=1234kb:ncpus=1)+(xsnd08:mem=1234kb:ncpus=1)
+                // のような値が入っているのでこれを集計する
+                auto resourceList = jobinfo["exec_vnode"].str.split("+").map!"a[1..$-1]".find!(a => a.startsWith(name));
+                if(resourceList.empty)
+                    continue;
+
+                auto resources = resourceList.front.split(":");
+                auto ncpus_f = resources.find!(a => a.startsWith("ncpus="));
+                if(ncpus_f.empty){
+                    userCPUs[user] += 1;
+                    continue;
+                }
+
+                userCPUs[user] += ncpus_f.front[6 .. $].to!int;  // remove "ncpus=" and convert to int
+            }
+        }
+
+        auto usercpus = userCPUs.byKeyValue.map!q{format!"%7s*%2s"(a.key, a.value)}.array();
+
+        auto fmt = fmtstr;
+        if(showColored && ncpus.startsWith("0/") || mem.startsWith("0gb")) {
+            fmt = fmt.color(fg.red);
+        }
+
+        writeValues(stdout.lockingTextWriter, false, fmt, name, njob, ncpus, mem, ngpus, usercpus);
+        writeln();
+    }
+}
+
+
+void showUserInfo(in JSONValue[] nodeList, in JSONValue[] jobList, string fmtstr, bool showColored)
+{
     // List of all users
     auto userList = jobList.map!q{a["Variable_List"]["PBS_O_LOGNAME"].str}.array().sort().uniq.array();
 
-    writeln("Username\ttJob\ttCPU\ttMem\t\trJob\trCPU\trMem");
-    writeln("----------\t----\t----\t--------\t----\t----\t--------");
+    writeValues(stdout.lockingTextWriter, true, fmtstr, "Username", "tJob", "tCPU", "tMem", "rJob", "rCPU", "rMem");
+    writeln();
+    writeHyphen(stdout.lockingTextWriter, fmtstr);
+    writeln();
+
     foreach(user; userList) {
         auto totJobs = jobList.removeTerminatedJob().getUserJobs(user).array();
         auto runJobs = totJobs.filter!q{a["job_state"].str == "R"}.array();
 
-        Tuple!(size_t, long, string) aggregate(JSONValue[] list) {
+        Tuple!(size_t, long, string) aggregate(in JSONValue[] list) {
             size_t len = list.length;
             long ncpus = list.map!(a => a["Resource_List"]["ncpus"].integer).sum();
             double mem = list.map!(a => a["Resource_List"]["mem"].str.memBytes.to!double).sum();
@@ -154,27 +250,40 @@ void main()
         auto totResource = aggregate(totJobs);
         auto runResource = aggregate(runJobs);
 
-        auto fmt = "%10s\t%4d\t%4d\t%8s\t%4d\t%4d\t%8s";
-        if(user == environment["USER"])
+        auto fmt = fmtstr;
+        if(showColored && user == environment["USER"])
             fmt = fmt.color(fg.green);
 
-        cwritefln(fmt, user, totResource.tupleof, runResource.tupleof);
+        writeValues(stdout.lockingTextWriter, false, fmt, user, totResource.tupleof, runResource.tupleof);
+        writeln();
     }
+}
 
+
+void showJobInfo(in JSONValue[] nodeList, in JSONValue[] jobList, string fmtstr, bool showOnlyMyJobs, bool showColored)
+{
+    auto currUser = environment["USER"];
+
+    writeValues(stdout.lockingTextWriter, true, fmtstr, "Job ID", "Username", "S", "tCPU", "tMem", "rMem", "vMem", "CPU(%)", "CPU Time", "Walltime");
+    writeln();
+    writeHyphen(stdout.lockingTextWriter, fmtstr);
     writeln();
 
-
-    // List of all user's jobs
-    auto currUser = environment["USER"];
-    writeln("Job ID\t\tS\ttCPU\ttMem\t\trMem\t\tvMem\t\tCPU(%)\tCPU Time\tWalltime");
-    writeln("----------\t-\t----\t--------\t--------\t--------\t------\t----------\t----------");
-    auto userJobs = jobList.getUserJobs(currUser).array.sort!q{a["key"].str < a["key"].str}.jobSort();
-    foreach(job; userJobs) {
+    foreach(job; jobList.dup.jobSort()) {
         // writeln(job["key"]);
         string id = job["key"].str;
         long tcpu = job["Resource_List"]["ncpus"].integer;
         string tmem = job["Resource_List"]["mem"].str.toGB;
         string jobS = job["job_state"].str;
+        string user = job["Variable_List"]["PBS_O_LOGNAME"].str;
+
+        // アレイジョブのうち，終わっているジョブの表示はしない
+        if(jobS == "X")
+            continue;
+
+        // -mオプションが渡されたときは自身のジョブ以外は表示しない
+        if(showOnlyMyJobs && user != currUser)
+            continue;
 
         string rmem = "?";
         string vmem = "?";
@@ -189,10 +298,14 @@ void main()
             walltime = job["resources_used"]["walltime"].str;
         }
 
-        auto fmt = "%10s\t%1s\t%4s\t%8s\t%8s\t%8s\t%6s\t%10s\t%10s";
-        if(jobS == "R")
+        auto fmt = fmtstr;
+        if(showColored & showOnlyMyJobs && jobS == "R") {
             fmt = fmt.color(fg.green);
+        } else if(showColored & !showOnlyMyJobs && user == currUser) {
+            fmt = fmt.color(fg.green);
+        }
 
-        cwritefln(fmt, id, jobS, tcpu, tmem, rmem, vmem, cpupercent, cputime, walltime);
+        writeValues(stdout.lockingTextWriter, false, fmt, id, user, jobS, tcpu, tmem, rmem, vmem, cpupercent, cputime, walltime);
+        writeln();
     }
 }
