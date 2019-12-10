@@ -272,7 +272,7 @@ void showNodeInfo(in JSONValue[] nodeList, in JSONValue[] jobList, string fmtstr
         auto usercpus = userCPUs.byKeyValue.map!(a => tuple(a.key, a.value)).array();
 
         auto fmt = fmtstr;
-        if(showColored && state != "free") {
+        if(showColored && (state != "free" || ncpus.startsWith("0/") || mem.startsWith("0gb/")) ) {
             fmt = fmt.color(fg.red);
         }
 
