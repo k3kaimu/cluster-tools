@@ -52,7 +52,7 @@ auto jobSort(R)(R r)
             idx = key.findSplitAfter("[")[1][0 .. $-1].to!int;
         }
 
-        return format("%s--%02d", jobname, idx);
+        return format("%s--%06d", jobname, idx);
     }
 
     return r.array.sort!((a, b) => jobIden(a) < jobIden(b) ).array();
@@ -87,21 +87,43 @@ void writeValues(Writer, T...)(auto ref Writer writer, bool leftalign, const(cha
         Lswitch: switch(fmtspec.indexStart) {
           static foreach(i, arg; args) {
             case i+1:
-                static if(is(typeof(arg) : const(char)[])) fmtspec.flDash = leftalign;
-                formatValue(writer, arg, fmtspec);
+                typeof(arg) value = arg;
+                static if(is(typeof(arg) : const(char)[])){
+                    fmtspec.flDash = leftalign;
+                    if(arg.length > fmtspec.width)
+                        value = value[0 .. fmtspec.width];
+                }
+                formatValue(writer, value, fmtspec);
                 break Lswitch;
           }
 
             default:
-                enforce("フォーマットにインデックス指定がありません");
+                enforce(0, "フォーマット`%s`が不正です．インデックスは1--%sの範囲で指定してください．".format(fmtspec, args.length));
         }
     }
 }
 
 
-immutable defaultShowNodesFmt = "%1$6s  %2$5s  %3$9s  %4$11s  %5$3s  %6$-(%10s, %)";
-immutable defaultShowUsersFmt = "%1$10s  %2$4s  %3$4s  %4$8s  %5$4s  %6$4s  %7$8s";
-immutable defaultShowJobsFmt =  "%1$10s  %2$10s  %3$1s  %4$4s  %5$8s  %6$8s  %7$8s  %8$6s  %9$10s  %10$10s";
+string replaceFmtString(string fmt, in string[] arglist)
+{
+    foreach(i, e; arglist)
+        fmt = fmt.replace('%' ~ e ~ ':', '%' ~ to!string(i+1) ~ '$');
+
+    return fmt;
+}
+
+
+alias showNodesColumnNames = AliasSeq!("vnode", "njobs", "ncpus f/t", "mem f/t", "gpu", ["users"], "state");
+immutable showNodesFmtList = ["name", "njobs", "cpu", "mem", "gpu", "users", "state"];
+immutable defaultShowNodesFmt = "%name:6s  %state:8s  %njobs:5s  %cpu:9s  %mem:11s  %gpu:3s  %users:-(%10s, %)";
+
+alias showUsersColumnNames = AliasSeq!("Username", "tJob", "tCPU", "tMem", "rJob", "rCPU", "rMem");
+immutable showUsersFmtList = ["user", "tjob", "tcpu", "tmem", "rjob", "rcpu", "rmem"];
+immutable defaultShowUsersFmt = "%user:10s  %tjob:4s  %tcpu:4s  %tmem:8s  %rjob:4s  %rcpu:4s  %rmem:8s";
+
+alias showJobsColumnNames = AliasSeq!("Job ID", "Username", "S", "tCPU", "tMem", "rMem", "vMem", "CPU(%)", "CPU Time", "Walltime", "Jobname", "Queue");
+immutable showJobsFmtList = ["id", "user", "S", "tcpu", "tmem", "rmem", "vmem", "cpup", "cput", "walltime", "name", "queue"];
+immutable defaultShowJobsFmt =  "%id:10s  %user:10s  %queue:6s  %name:20s  %S:1s  %tcpu:4s  %tmem:8s  %rmem:8s  %vmem:8s  %cpup:6s  %cput:10s  %walltime:10s";
 
 
 void main(string[] args)
@@ -150,16 +172,19 @@ void main(string[] args)
 
 
     if(showNodes) {
+        fmtShowNode = fmtShowNode.replaceFmtString(showNodesFmtList);
         showNodeInfo(nodeList, jobList, fmtShowNode, showColored);
         writeln();
     }
 
     if(showUsers) {
+        fmtShowUsers = fmtShowUsers.replaceFmtString(showUsersFmtList);
         showUserInfo(nodeList, jobList, fmtShowUsers, showColored);
         writeln();
     }
 
     if(showJobs) {
+        fmtShowJobs = fmtShowJobs.replaceFmtString(showJobsFmtList);
         showJobInfo(nodeList, jobList, fmtShowJobs, showOnlyMyJobs, showColored);
         writeln();
     }
@@ -168,10 +193,14 @@ void main(string[] args)
 
 void showNodeInfo(in JSONValue[] nodeList, in JSONValue[] jobList, string fmtstr, bool showColored)
 {
-    writeValues(stdout.lockingTextWriter, true, fmtstr, "vnode", "njobs", "ncpus f/t", "mem f/t", "gpu", ["users"]);
+    writeValues(stdout.lockingTextWriter, true, fmtstr, showNodesColumnNames);
     writeln();
     writeHyphen(stdout.lockingTextWriter, fmtstr);
     writeln();
+    scope(success) {
+        writeHyphen(stdout.lockingTextWriter, fmtstr);
+        writeln();
+    }
 
     foreach(node; nodeList) {
         auto name = node["key"].str;
@@ -180,6 +209,7 @@ void showNodeInfo(in JSONValue[] nodeList, in JSONValue[] jobList, string fmtstr
         auto mem = node["mem f/t"].str;
         auto ncpus = node["ncpus f/t"].str;
         auto ngpus = node["ngpus f/t"].str;
+        auto state = node["State"].str;
 
         long[string] userCPUs;
         foreach(jobid; jobids) {
@@ -216,11 +246,11 @@ void showNodeInfo(in JSONValue[] nodeList, in JSONValue[] jobList, string fmtstr
         auto usercpus = userCPUs.byKeyValue.map!q{format!"%7s*%2s"(a.key, a.value)}.array();
 
         auto fmt = fmtstr;
-        if(showColored && ncpus.startsWith("0/") || mem.startsWith("0gb")) {
+        if(showColored && state != "free") {
             fmt = fmt.color(fg.red);
         }
 
-        writeValues(stdout.lockingTextWriter, false, fmt, name, njob, ncpus, mem, ngpus, usercpus);
+        writeValues(stdout.lockingTextWriter, false, fmt, name, njob, ncpus, mem, ngpus, usercpus, state);
         writeln();
     }
 }
@@ -231,10 +261,14 @@ void showUserInfo(in JSONValue[] nodeList, in JSONValue[] jobList, string fmtstr
     // List of all users
     auto userList = jobList.map!q{a["Variable_List"]["PBS_O_LOGNAME"].str}.array().sort().uniq.array();
 
-    writeValues(stdout.lockingTextWriter, true, fmtstr, "Username", "tJob", "tCPU", "tMem", "rJob", "rCPU", "rMem");
+    writeValues(stdout.lockingTextWriter, true, fmtstr, showUsersColumnNames);
     writeln();
     writeHyphen(stdout.lockingTextWriter, fmtstr);
     writeln();
+    scope(success) {
+        writeHyphen(stdout.lockingTextWriter, fmtstr);
+        writeln();
+    }
 
     foreach(user; userList) {
         auto totJobs = jobList.removeTerminatedJob().getUserJobs(user).array();
@@ -264,10 +298,14 @@ void showJobInfo(in JSONValue[] nodeList, in JSONValue[] jobList, string fmtstr,
 {
     auto currUser = environment["USER"];
 
-    writeValues(stdout.lockingTextWriter, true, fmtstr, "Job ID", "Username", "S", "tCPU", "tMem", "rMem", "vMem", "CPU(%)", "CPU Time", "Walltime");
+    writeValues(stdout.lockingTextWriter, true, fmtstr, showJobsColumnNames);
     writeln();
     writeHyphen(stdout.lockingTextWriter, fmtstr);
     writeln();
+    scope(success) {
+        writeHyphen(stdout.lockingTextWriter, fmtstr);
+        writeln();
+    }
 
     foreach(job; jobList.dup.jobSort()) {
         // writeln(job["key"]);
@@ -276,6 +314,8 @@ void showJobInfo(in JSONValue[] nodeList, in JSONValue[] jobList, string fmtstr,
         string tmem = job["Resource_List"]["mem"].str.toGB;
         string jobS = job["job_state"].str;
         string user = job["Variable_List"]["PBS_O_LOGNAME"].str;
+        string jobname = job["Job_Name"].str;
+        string queue = job["queue"].str;
 
         // アレイジョブのうち，終わっているジョブの表示はしない
         if(jobS == "X")
@@ -299,13 +339,13 @@ void showJobInfo(in JSONValue[] nodeList, in JSONValue[] jobList, string fmtstr,
         }
 
         auto fmt = fmtstr;
-        if(showColored & showOnlyMyJobs && jobS == "R") {
+        if(showColored && showOnlyMyJobs && jobS == "R") {
             fmt = fmt.color(fg.green);
-        } else if(showColored & !showOnlyMyJobs && user == currUser) {
+        } else if(showColored && !showOnlyMyJobs && user == currUser) {
             fmt = fmt.color(fg.green);
         }
 
-        writeValues(stdout.lockingTextWriter, false, fmt, id, user, jobS, tcpu, tmem, rmem, vmem, cpupercent, cputime, walltime);
+        writeValues(stdout.lockingTextWriter, false, fmt, id, user, jobS, tcpu, tmem, rmem, vmem, cpupercent, cputime, walltime, jobname, queue);
         writeln();
     }
 }
