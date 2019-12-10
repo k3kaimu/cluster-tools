@@ -126,6 +126,9 @@ immutable showJobsFmtList = ["id", "user", "S", "tcpu", "tmem", "rmem", "vmem", 
 immutable defaultShowJobsFmt =  "%id:10s  %user:10s  %queue:6s  %name:20s  %S:1s  %tcpu:4s  %tmem:8s  %rmem:8s  %vmem:8s  %cpup:6s  %cput:10s  %walltime:10s";
 
 
+bool dontShowHeader;
+
+
 void main(string[] args)
 {
     bool showNodes, showUsers, showJobs, showOnlyMyJobs, showColored;
@@ -144,7 +147,8 @@ void main(string[] args)
         "jobfmt",   "ジョブ情報を表示する際のフォーマット指定．デフォルト値：" ~ defaultShowJobsFmt,
                                             &fmtShowJobs,
         "m|mine",   "自身のジョブのみ表示する", &showOnlyMyJobs,
-        "c|color",  "色付きで表示する",         &showColored);    // enum
+        "c|color",  "色付きで表示する",         &showColored,
+        "noheader", "各表のヘッダを表示しない", &dontShowHeader);
 
     if(helpInformation.helpWanted) {
         defaultGetoptPrinter("pbsnodesやqstatから得られるクラスタ計算機の情報を表示します",
@@ -199,13 +203,18 @@ void main(string[] args)
 
 void showNodeInfo(in JSONValue[] nodeList, in JSONValue[] jobList, string fmtstr, bool showColored)
 {
-    writeValues(stdout.lockingTextWriter, true, fmtstr, showNodesColumnNames);
-    writeln();
-    writeHyphen(stdout.lockingTextWriter, fmtstr);
-    writeln();
-    scope(success) {
+    if(! dontShowHeader) {
+        writeValues(stdout.lockingTextWriter, true, fmtstr, showNodesColumnNames);
+        writeln();
         writeHyphen(stdout.lockingTextWriter, fmtstr);
         writeln();
+    }
+
+    scope(success) {
+        if(! dontShowHeader) {
+            writeHyphen(stdout.lockingTextWriter, fmtstr);
+            writeln();
+        }
     }
 
     foreach(node; nodeList) {
@@ -267,13 +276,18 @@ void showUserInfo(in JSONValue[] nodeList, in JSONValue[] jobList, string fmtstr
     // List of all users
     auto userList = jobList.map!q{a["Variable_List"]["PBS_O_LOGNAME"].str}.array().sort().uniq.array();
 
-    writeValues(stdout.lockingTextWriter, true, fmtstr, showUsersColumnNames);
-    writeln();
-    writeHyphen(stdout.lockingTextWriter, fmtstr);
-    writeln();
-    scope(success) {
+    if(! dontShowHeader) {
+        writeValues(stdout.lockingTextWriter, true, fmtstr, showUsersColumnNames);
+        writeln();
         writeHyphen(stdout.lockingTextWriter, fmtstr);
         writeln();
+    }
+
+    scope(success) {
+        if(! dontShowHeader) {
+            writeHyphen(stdout.lockingTextWriter, fmtstr);
+            writeln();
+        }
     }
 
     foreach(user; userList) {
@@ -304,13 +318,18 @@ void showJobInfo(in JSONValue[] nodeList, in JSONValue[] jobList, string fmtstr,
 {
     auto currUser = environment["USER"];
 
-    writeValues(stdout.lockingTextWriter, true, fmtstr, showJobsColumnNames);
-    writeln();
-    writeHyphen(stdout.lockingTextWriter, fmtstr);
-    writeln();
-    scope(success) {
+    if(! dontShowHeader) {
+        writeValues(stdout.lockingTextWriter, true, fmtstr, showJobsColumnNames);
+        writeln();
         writeHyphen(stdout.lockingTextWriter, fmtstr);
         writeln();
+    }
+
+    scope(success) {
+        if(! dontShowHeader) {
+            writeHyphen(stdout.lockingTextWriter, fmtstr);
+            writeln();
+        }
     }
 
     foreach(job; jobList.dup.jobSort()) {
