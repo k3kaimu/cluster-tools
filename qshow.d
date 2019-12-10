@@ -146,11 +146,17 @@ void main(string[] args)
         "m|mine",   "自身のジョブのみ表示する", &showOnlyMyJobs,
         "c|color",  "色付きで表示する",         &showColored);    // enum
 
-    if(helpInformation.helpWanted || (!showNodes && !showUsers && !showJobs)) {
+    if(helpInformation.helpWanted) {
         defaultGetoptPrinter("pbsnodesやqstatから得られるクラスタ計算機の情報を表示します",
             helpInformation.options);
 
         return;
+    }
+
+    if(!showNodes && !showUsers && !showJobs) {
+        showNodes = true;
+        showUsers = true;
+        showJobs = true;
     }
 
 
