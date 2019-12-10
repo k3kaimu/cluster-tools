@@ -87,7 +87,7 @@ void writeValues(Writer, T...)(auto ref Writer writer, bool leftalign, const(cha
         Lswitch: switch(fmtspec.indexStart) {
           static foreach(i, arg; args) {
             case i+1:
-                static if(!isArray!(typeof(arg))) fmtspec.flDash = leftalign;
+                static if(is(typeof(arg) : const(char)[])) fmtspec.flDash = leftalign;
                 formatValue(writer, arg, fmtspec);
                 break Lswitch;
           }
