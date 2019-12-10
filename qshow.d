@@ -66,9 +66,8 @@ void writeHyphen(Writer)(auto ref Writer writer, const(char)[] fmt)
     while(fmtspec.writeUpToNextSpec(writer)) {
         size_t width;
         if(fmtspec.nested) {
-            auto nestedFmtSpec = FormatSpec!char(fmtspec.nested);
-            nestedFmtSpec.writeUpToNextSpec(writer);
-            width = nestedFmtSpec.width;
+            // usersのため
+            width = 10;
         }
         else
             width = fmtspec.width;
@@ -93,7 +92,20 @@ void writeValues(Writer, T...)(auto ref Writer writer, bool leftalign, const(cha
                     if(fmtspec.width != 0 && arg.length > fmtspec.width)
                         value = value[0 .. fmtspec.width];
                 }
-                formatValue(writer, value, fmtspec);
+
+                static if(is(typeof(arg) : const(char)[]))
+                {
+                    if(fmtspec.nested is null)
+                        formatValue(writer, value, fmtspec);
+                    else {
+                        // nodefmtにおけるusersはヘッダの表示時にはただの文字列として表示
+                        formattedWrite(writer, "%s", value);
+                    }
+                }
+                else
+                {
+                    formatValue(writer, value, fmtspec);
+                }
                 break Lswitch;
           }
 
@@ -113,7 +125,7 @@ string replaceFmtString(string fmt, in string[] arglist)
 }
 
 
-alias showNodesColumnNames = AliasSeq!("vnode", "njobs", "ncpus f/t", "mem f/t", "gpu", ["users"], "state");
+alias showNodesColumnNames = AliasSeq!("vnode", "njobs", "ncpus f/t", "mem f/t", "gpu", "users", "state");
 immutable showNodesFmtList = ["name", "njobs", "cpu", "mem", "gpu", "users", "state"];
 immutable defaultShowNodesFmt = "%name:6s  %state:8s  %njobs:5s  %cpu:9s  %mem:11s  %gpu:3s  %users:-(%(%7s*%2d%), %)";
 
