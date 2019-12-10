@@ -219,6 +219,6 @@ xsnd13,21*c222222, 7*aa000
 $ git clone https://github.com/k3kaimu/cluster-tools
 $ cd cluster-tools
 $ dub build --single qshow.d
-$ ls -al
+$ ls
 README.md  qshow  qshow.d
 ```
