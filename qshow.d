@@ -90,7 +90,7 @@ void writeValues(Writer, T...)(auto ref Writer writer, bool leftalign, const(cha
                 typeof(arg) value = arg;
                 static if(is(typeof(arg) : const(char)[])){
                     fmtspec.flDash = leftalign;
-                    if(arg.length > fmtspec.width)
+                    if(fmtspec.width != 0 && arg.length > fmtspec.width)
                         value = value[0 .. fmtspec.width];
                 }
                 formatValue(writer, value, fmtspec);
@@ -184,19 +184,18 @@ void main(string[] args)
     if(showNodes) {
         fmtShowNode = fmtShowNode.replaceFmtString(showNodesFmtList);
         showNodeInfo(nodeList, jobList, fmtShowNode, showColored);
-        writeln();
+        if(showUsers || showJobs) writeln();
     }
 
     if(showUsers) {
         fmtShowUsers = fmtShowUsers.replaceFmtString(showUsersFmtList);
         showUserInfo(nodeList, jobList, fmtShowUsers, showColored);
-        writeln();
+        if(showJobs) writeln();
     }
 
     if(showJobs) {
         fmtShowJobs = fmtShowJobs.replaceFmtString(showJobsFmtList);
         showJobInfo(nodeList, jobList, fmtShowJobs, showOnlyMyJobs, showColored);
-        writeln();
     }
 }
 

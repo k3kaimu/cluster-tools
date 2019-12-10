@@ -116,12 +116,13 @@ Job ID      Username    S  tCPU  tMem      rMem      vMem      CPU(%)  CPU Time 
 qshowではオプションの`--nodefmt`，`--userfmt`，`--jobfmt`を与えることで表示する情報のフォーマットを変えることができます．
 フォーマット指定文字列はC言語のように`%`から始まる記法になっています．
 より詳細には，`%{column-name}:{column-width}{fmt-spec}`となっており，`{column-name}`はカラム名，`{column-width}`はカラムの文字数，`{fmt-spec}`は`s`などのフォーマット指定子です．
+`{column-width}`が指定されていない場合は表示する文字列の長さは無制限であると解釈します．
 
 たとえば，次の例では各ノードのノード名（6文字まで）と割り当てられているジョブの数（4文字まで）を表示します．
 また，二つのカラムの間には四つの半角スペースを挿入しています．
 
 ```sh
-$ ./qshow -n --nodefmt='%name:6s    %njobs:4s'
+$ qshow -n --nodefmt='%name:6s    %njobs:4s'
 vnode     njob
 ------    ----
 xsnd00       4
@@ -139,6 +140,26 @@ xsnd11       7
 xsnd12       7
 xsnd13       7
 ------    ----
+```
+
+他のプログラムでqshowの出力を処理したい場合，`--noheader`オプションを有効にしてカンマ区切りやスペース区切りで出力すると便利かもしれません．
+
+```sh
+$ qshow  --noheader -n --nodefmt='%name:s,%njobs:s'
+xsnd00,0
+xsnd01,1
+xsnd02,1
+xsnd03,1
+xsnd04,1
+xsnd05,7
+xsnd06,7
+xsnd07,7
+xsnd08,7
+xsnd09,1
+xsnd10,4
+xsnd11,0
+xsnd12,0
+xsnd13,0
 ```
 
 
