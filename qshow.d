@@ -36,7 +36,7 @@ auto memBytes(string s)
 
 auto toGB(string s)
 {
-    return format!"%6.1fGB"(memBytes(s) / 1E9);
+    return format!"%.1fGB"(memBytes(s) / 1E9);
 }
 
 
@@ -115,7 +115,7 @@ string replaceFmtString(string fmt, in string[] arglist)
 
 alias showNodesColumnNames = AliasSeq!("vnode", "njobs", "ncpus f/t", "mem f/t", "gpu", ["users"], "state");
 immutable showNodesFmtList = ["name", "njobs", "cpu", "mem", "gpu", "users", "state"];
-immutable defaultShowNodesFmt = "%name:6s  %state:8s  %njobs:5s  %cpu:9s  %mem:11s  %gpu:3s  %users:-(%10s, %)";
+immutable defaultShowNodesFmt = "%name:6s  %state:8s  %njobs:5s  %cpu:9s  %mem:11s  %gpu:3s  %users:-(%(%7s*%2d%), %)";
 
 alias showUsersColumnNames = AliasSeq!("Username", "tJob", "tCPU", "tMem", "rJob", "rCPU", "rMem");
 immutable showUsersFmtList = ["user", "tjob", "tcpu", "tmem", "rjob", "rcpu", "rmem"];
@@ -257,7 +257,7 @@ void showNodeInfo(in JSONValue[] nodeList, in JSONValue[] jobList, string fmtstr
             }
         }
 
-        auto usercpus = userCPUs.byKeyValue.map!q{format!"%7s*%2s"(a.key, a.value)}.array();
+        auto usercpus = userCPUs.byKeyValue.map!(a => tuple(a.key, a.value)).array();
 
         auto fmt = fmtstr;
         if(showColored && state != "free") {

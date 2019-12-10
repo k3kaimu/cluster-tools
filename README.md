@@ -95,7 +95,7 @@ Job ID      Username    S  tCPU  tMem      rMem      vMem      CPU(%)  CPU Time 
 * `--nodefmt`
 
 ノードの情報を表示する際のフォーマットを指定します．
-デフォルトでは`--nodefmt='%name:6s  %state:8s  %njobs:5s  %cpu:9s  %mem:11s  %gpu:3s  %users:-(%10s, %)'`と等価です．
+デフォルトでは`--nodefmt='%name:6s  %state:8s  %njobs:5s  %cpu:9s  %mem:11s  %gpu:3s  %users:-(%(%7s*%2d%), %)'`と等価です．
 詳しくは[フォーマット指定の書式](#フォーマット指定の書式)を参照してください．
 
 * `--userfmt`
@@ -160,6 +160,29 @@ xsnd10,4
 xsnd11,0
 xsnd12,0
 xsnd13,0
+```
+
+`--nodefmt`における`users`は特殊です．
+詳しくは[D言語の`std.typecons.tuple.toString`のドキュメント](https://dlang.org/library/std/typecons/tuple.to_string.html)を参照してください．
+
+以下の例は，各ノードの名前とジョブを実行しているユーザーをカンマ区切りで表示します．
+
+```sh
+$ qshow  --noheader -n --nodefmt='%name:s,%users:-(%(%s%),%)'
+xsnd00,c222222,aa000
+xsnd01,c222222,b111111,aa000
+xsnd02,b111111,d333333,aa000
+xsnd03,b111111
+xsnd04,b111111
+xsnd05,c222222,aa000
+xsnd06,c222222,aa000
+xsnd07,c222222,b111111,aa000
+xsnd08,c222222,b111111,aa000
+xsnd09,d333333
+xsnd10,c222222,aa000
+xsnd11,c222222,aa000
+xsnd12,c222222,aa000
+xsnd13,c222222,aa000
 ```
 
 
