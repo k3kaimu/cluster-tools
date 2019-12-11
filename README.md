@@ -93,7 +93,7 @@ Job ID      Username    S  tCPU  tMem      rMem      vMem      CPU(%)  CPU Time 
 フォーマット指定と組み合わせることで，qshowの結果を他のシェルスクリプトやプログラムで処理する際の利便性が向上すると思われます．
 
 
-* `--nodefmt`
+### `--nodefmt`
 
 ノードの情報を表示する際のフォーマットを指定します．  
 デフォルトでは`--nodefmt='%name:6s  %state:8s  %njobs:5s  %cpu:9s  %mem:11s  %gpu:3s  %users:-(%(%7s*%2d%), %)'`と等価です．  
@@ -110,7 +110,7 @@ Job ID      Username    S  tCPU  tMem      rMem      vMem      CPU(%)  CPU Time 
 詳しくは[フォーマット指定の書式](#フォーマット指定の書式)を参照してください．
 
 
-* `--userfmt`
+### `--userfmt`
 
 ユーザーの情報を表示する際のフォーマットを指定します．  
 デフォルトでは`--userfmt='%user:10s  %tjob:4s  %tcpu:4s  %tmem:8s  %rjob:4s  %rcpu:4s  %rmem:8s'`と等価です．  
@@ -127,7 +127,7 @@ Job ID      Username    S  tCPU  tMem      rMem      vMem      CPU(%)  CPU Time 
 詳しくは[フォーマット指定の書式](#フォーマット指定の書式)を参照してください．
 
 
-* `--jobfmt`
+### `--jobfmt`
 
 ジョブの情報を表示する際のフォーマットを指定します．  
 デフォルトでは`--jobfmt='%id:10s  %user:10s  %queue:6s  %name:20s  %S:1s  %tcpu:4s  %tmem:8s  %rmem:8s  %vmem:8s  %cpup:6s  %cput:10s  %walltime:10s  %C:1s  %image:20s'`と等価です．  
