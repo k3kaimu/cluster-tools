@@ -99,13 +99,13 @@ Job ID      Username    S  tCPU  tMem      rMem      vMem      CPU(%)  CPU Time 
 デフォルトでは`--nodefmt='%name:6s  %state:8s  %njobs:5s  %cpu:9s  %mem:11s  %gpu:3s  %users:-(%(%7s*%2d%), %)'`と等価です．  
 使用可能なカラムは次の通りです．
 
-* `name`：ノード名
-* `state`：そのノードの状態
-* `njobs`：そのノードで実行中のジョブの数
-* `cpu`：そのノードのCPUコア空き状況
-* `mem`：そのノードのメモリの空き状況
-* `gpu`：そのノードのGPUの空き状況
-* `users`：そのノードでジョブを実行しているユーザーのリスト
+    + `name`：ノード名
+    + `state`：そのノードの状態
+    + `njobs`：そのノードで実行中のジョブの数
+    + `cpu`：そのノードのCPUコア空き状況
+    + `mem`：そのノードのメモリの空き状況
+    + `gpu`：そのノードのGPUの空き状況
+    + `users`：そのノードでジョブを実行しているユーザーのリスト
 
 詳しくは[フォーマット指定の書式](#フォーマット指定の書式)を参照してください．
 
@@ -116,13 +116,13 @@ Job ID      Username    S  tCPU  tMem      rMem      vMem      CPU(%)  CPU Time 
 デフォルトでは`--userfmt='%user:10s  %tjob:4s  %tcpu:4s  %tmem:8s  %rjob:4s  %rcpu:4s  %rmem:8s'`と等価です．  
 使用可能なカラムは次の通りです．
 
-* `user`：ユーザー名
-* `tjob`：ユーザーの実行中かキュー待機中のジョブの数
-* `tcpu`：ユーザーの実行中かキュー待機中のジョブが消費する合計CPUコア数
-* `tmem`：ユーザーの実行中かキュー待機中のジョブが消費する合計メモリ量
-* `rjob`：ユーザーの実行中のジョブ数
-* `rcpu`：ユーザーの実行中のジョブが確保している合計CPUコア数
-* `rmem`：ユーザーの実行中のジョブが確保している合計メモリ量
+    + `user`：ユーザー名
+    + `tjob`：ユーザーの実行中かキュー待機中のジョブの数
+    + `tcpu`：ユーザーの実行中かキュー待機中のジョブが消費する合計CPUコア数
+    + `tmem`：ユーザーの実行中かキュー待機中のジョブが消費する合計メモリ量
+    + `rjob`：ユーザーの実行中のジョブ数
+    + `rcpu`：ユーザーの実行中のジョブが確保している合計CPUコア数
+    + `rmem`：ユーザーの実行中のジョブが確保している合計メモリ量
 
 詳しくは[フォーマット指定の書式](#フォーマット指定の書式)を参照してください．
 
@@ -133,21 +133,21 @@ Job ID      Username    S  tCPU  tMem      rMem      vMem      CPU(%)  CPU Time 
 デフォルトでは`--jobfmt='%id:10s  %user:10s  %queue:6s  %name:20s  %S:1s  %tcpu:4s  %tmem:8s  %rmem:8s  %vmem:8s  %cpup:6s  %cput:10s  %walltime:10s  %C:1s  %image:20s'`と等価です．  
 使用可能なカラムは次の通りです．
 
-* `id`：ジョブのID
-* `user`：ジョブを投入したユーザー
-* `queue`：投入されたキュー
-* `name`：ジョブ名
-* `S`：ジョブの状態（キュー待機の場合`Q`，実行中の場合`R`，終了済みの場合`X`）
-* `tcpu`：ジョブが確保したCPUコア数
-* `tmem`：ジョブが確保したメモリ量
-* `rmem`：実際にジョブが消費しているメモリ量
-* `vmem`：実際にジョブが消費している仮想メモリ量
-* `cpup`：ジョブがどれだけCPU負荷をかけているか．最大はtcpu * 100の値
-* `cput`：ジョブが消費したCPU時間
-* `walltime`：ジョブの経過時間
-* `C`：Dockerの場合`D`，Singularityの場合`S`
-* `container`：Dockerの場合`Docker`，Singularityの場合`Singularity`
-* `image`：実行しているイメージの名前
+    + `id`：ジョブのID
+    + `user`：ジョブを投入したユーザー
+    + `queue`：投入されたキュー
+    + `name`：ジョブ名
+    + `S`：ジョブの状態（キュー待機の場合`Q`，実行中の場合`R`，終了済みの場合`X`）
+    + `tcpu`：ジョブが確保したCPUコア数
+    + `tmem`：ジョブが確保したメモリ量
+    + `rmem`：実際にジョブが消費しているメモリ量
+    + `vmem`：実際にジョブが消費している仮想メモリ量
+    + `cpup`：ジョブがどれだけCPU負荷をかけているか．最大はtcpu * 100の値
+    + `cput`：ジョブが消費したCPU時間
+    + `walltime`：ジョブの経過時間
+    + `C`：Dockerの場合`D`，Singularityの場合`S`
+    + `container`：Dockerの場合`Docker`，Singularityの場合`Singularity`
+    + `image`：実行しているイメージの名前
 
 詳しくは[フォーマット指定の書式](#フォーマット指定の書式)を参照してください．
 
