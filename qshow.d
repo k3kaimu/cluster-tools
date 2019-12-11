@@ -127,15 +127,15 @@ string replaceFmtString(string fmt, in string[] arglist)
 
 alias showNodesColumnNames = AliasSeq!("vnode", "njobs", "ncpus f/t", "mem f/t", "gpu", "users", "state");
 immutable showNodesFmtList = ["name", "njobs", "cpu", "mem", "gpu", "users", "state"];
-immutable defaultShowNodesFmt = "%name:6s  %state:8s  %njobs:5s  %cpu:9s  %mem:11s  %gpu:3s  %users:-(%(%7s*%2d%), %)";
+immutable defaultShowNodesFmt = "%name:6s  %state:8s  %njobs:5s  %cpu:9s  %mem:11s  %gpu:3s  %users:(%(%7s*%2d%), %)";
 
 alias showUsersColumnNames = AliasSeq!("Username", "tJob", "tCPU", "tMem", "rJob", "rCPU", "rMem");
 immutable showUsersFmtList = ["user", "tjob", "tcpu", "tmem", "rjob", "rcpu", "rmem"];
 immutable defaultShowUsersFmt = "%user:10s  %tjob:4s  %tcpu:4s  %tmem:8s  %rjob:4s  %rcpu:4s  %rmem:8s";
 
-alias showJobsColumnNames = AliasSeq!("Job ID", "Username", "S", "tCPU", "tMem", "rMem", "vMem", "CPU(%)", "CPU Time", "Walltime", "Jobname", "Queue");
-immutable showJobsFmtList = ["id", "user", "S", "tcpu", "tmem", "rmem", "vmem", "cpup", "cput", "walltime", "name", "queue"];
-immutable defaultShowJobsFmt =  "%id:10s  %user:10s  %queue:6s  %name:20s  %S:1s  %tcpu:4s  %tmem:8s  %rmem:8s  %vmem:8s  %cpup:6s  %cput:10s  %walltime:10s";
+alias showJobsColumnNames = AliasSeq!("Job ID", "Username", "S", "tCPU", "tMem", "rMem", "vMem", "CPU(%)", "CPU Time", "Walltime", "Jobname", "Queue", "C", "Container", "Image");
+immutable showJobsFmtList = ["id", "user", "S", "tcpu", "tmem", "rmem", "vmem", "cpup", "cput", "walltime", "name", "queue", "C", "container", "image"];
+immutable defaultShowJobsFmt =  "%id:10s  %user:10s  %queue:6s  %name:20s  %S:1s  %tcpu:4s  %tmem:8s  %rmem:8s  %vmem:8s  %cpup:6s  %cput:10s  %walltime:10s  %C:1s  %image:20s";
 
 
 bool dontShowHeader;
@@ -352,6 +352,15 @@ void showJobInfo(in JSONValue[] nodeList, in JSONValue[] jobList, string fmtstr,
         string user = job["Variable_List"]["PBS_O_LOGNAME"].str;
         string jobname = job["Job_Name"].str;
         string queue = job["queue"].str;
+        string containerType;
+        string containerImage;
+        if("SINGULARITY_IMAGE" in job["Variable_List"]) {
+            containerType = "Singularity";
+            containerImage = job["Variable_List"]["SINGULARITY_IMAGE"].str;
+        } else if ("DOCKER_IMAGE" in job["Variable_List"]) {
+            containerType = "Docker";
+            containerImage = job["Variable_List"]["DOCKER_IMAGE"].str;
+        }
 
         // アレイジョブのうち，終わっているジョブの表示はしない
         if(jobS == "X")
@@ -381,7 +390,10 @@ void showJobInfo(in JSONValue[] nodeList, in JSONValue[] jobList, string fmtstr,
             fmt = fmt.color(fg.green);
         }
 
-        writeValues(stdout.lockingTextWriter, false, fmt, id, user, jobS, tcpu, tmem, rmem, vmem, cpupercent, cputime, walltime, jobname, queue);
+        writeValues(stdout.lockingTextWriter, false,
+            fmt, id, user, jobS, tcpu, tmem,
+            rmem, vmem, cpupercent, cputime, walltime, jobname, queue,
+            containerType[0 .. 1], containerType, containerImage);
         writeln();
     }
 }
