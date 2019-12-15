@@ -134,17 +134,37 @@ size_t[] writeValues(Writer, T...)(auto ref Writer writer, bool leftalign, const
 }
 
 
-void writeColumnHeader(Writer, T)(auto ref Writer writer, const(char)[] fmt, size_t[] collens)
+void writeColumnHeader(T, Writer)(auto ref Writer writer, const(char)[] fmt, size_t[] collens)
 {
     string[] headers = getColumnNames!T();
 
     auto fmtspec = FormatSpec!char(fmt);
     while(fmtspec.writeUpToNextSpec(writer)) {
-        auto width = collens[fmtspec.indexStart-1];
-        foreach(i; 0 .. width)
-            .put(writer, header[fmtspec.indexStart-1][0 .. width]);
+        auto width = collens[0];
+        collens.popFront();
+
+        string h = headers[fmtspec.indexStart-1];
+        .put(writer, h[0 .. min(width, $)]);
+        if(width > h.length) {
+            foreach(i; 0 .. width - h.length)
+                .put(writer, ' ');
+        }
     }
 }
+
+
+void writeColumnHyphen(Writer)(auto ref Writer writer, const(char)[] fmt, size_t[] collens)
+{
+    auto fmtspec = FormatSpec!char(fmt);
+    while(fmtspec.writeUpToNextSpec(writer)) {
+        auto width = collens[0];
+        collens.popFront();
+
+        foreach(i; 0 .. width)
+            .put(writer, '-');
+    }
+}
+
 
 string replaceFmtString(T)(string fmt)
 {
@@ -455,20 +475,8 @@ struct ColorSetting(T)
 
 void showInfo(Info)(string fmtstr, Info[] list, bool dontShowHeader, bool showColored, ColorSetting!Info[] colorSettings...)
 {
-    if(! dontShowHeader) {
-        writeValues(stdout.lockingTextWriter, true, fmtstr, aliasSeqOf!(getColumnNames!Info()) );
-        writeln();
-        writeHyphen(stdout.lockingTextWriter, fmtstr);
-        writeln();
-    }
-
-    scope(success) {
-        if(! dontShowHeader) {
-            writeHyphen(stdout.lockingTextWriter, fmtstr);
-            writeln();
-        }
-    }
-
+    string[] lines;
+    size_t[] collens;
     foreach(info; list) {
         auto fmt = fmtstr;
         foreach(cs; colorSettings) {
@@ -477,7 +485,29 @@ void showInfo(Info)(string fmtstr, Info[] list, bool dontShowHeader, bool showCo
             }
         }
 
-        writeValues(stdout.lockingTextWriter, false, fmt, info.tupleof);
+        auto app = appender!string();
+        auto lens = writeValues(app, false, fmt, info.tupleof);
+        lines ~= app.data;
+
+        if(collens.length == 0)
+            collens = lens;
+
+        foreach(i, ref e; collens)
+            e = max(e, lens[i]);
+    }
+
+    if(! dontShowHeader) {
+        writeColumnHeader!Info(stdout.lockingTextWriter, fmtstr, collens);
+        writeln();
+        writeColumnHyphen(stdout.lockingTextWriter, fmtstr, collens);
+        writeln();
+    }
+
+    foreach(line; lines)
+        writeln(line);
+
+    if(! dontShowHeader) {
+        writeColumnHyphen(stdout.lockingTextWriter, fmtstr, collens);
         writeln();
     }
 }
