@@ -78,10 +78,20 @@ void writeHyphen(Writer)(auto ref Writer writer, const(char)[] fmt)
 }
 
 
-void writeValues(Writer, T...)(auto ref Writer writer, bool leftalign, const(char)[] fmt, T args)
+size_t writeValue(Writer, T)(auto ref Writer writer, auto ref T value, auto ref FormatSpec!char fmtspec)
+{
+    auto app = appender!string;
+    app.formatValue(value, fmtspec);
+    .put(writer, app.data);
+    return app.data.length;
+}
+
+
+size_t[] writeValues(Writer, T...)(auto ref Writer writer, bool leftalign, const(char)[] fmt, T args)
 {
     auto fmtspec = FormatSpec!char(fmt);
 
+    size_t[] writeLength;
     while(fmtspec.writeUpToNextSpec(writer)) {
         Lswitch: switch(fmtspec.indexStart) {
           static foreach(i, arg; args) {
@@ -96,21 +106,20 @@ void writeValues(Writer, T...)(auto ref Writer writer, bool leftalign, const(cha
                 static if(is(typeof(arg) : const(char)[]))
                 {
                     if(fmtspec.nested is null)
-                        formatValue(writer, value, fmtspec);
+                        writeLength ~= writeValue(writer, value, fmtspec);
                     else {
                         // nodefmtにおけるusersはヘッダの表示時にはただの文字列として表示
-                        formattedWrite(writer, "%s", value);
+                        writeLength ~= writeValue(writer, value, singleSpec("%s"));
                     }
                 }
                 else
                 {
-                    formatValue(writer, value, fmtspec);
+                    writeLength ~= writeValue(writer, value, fmtspec);
                 }
                 break Lswitch;
           }
 
             default:
-                // writefln!"'%s'"(fmt[0 .. $ - fmtspec.trailing.length])
                 stderr.writefln!"Format error:"();
                 stderr.writefln!"Input: %s"(fmt);
                 stderr.writef  !"Error: "();
@@ -120,6 +129,8 @@ void writeValues(Writer, T...)(auto ref Writer writer, bool leftalign, const(cha
                 enforce(0, "フォーマットが不正です");
         }
     }
+
+    return writeLength;
 }
 
 
