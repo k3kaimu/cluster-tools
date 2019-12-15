@@ -87,7 +87,7 @@ size_t writeValue(Writer, T)(auto ref Writer writer, auto ref T value, auto ref 
 }
 
 
-size_t[] writeValues(Writer, T...)(auto ref Writer writer, bool leftalign, const(char)[] fmt, T args)
+size_t[] writeValues(Writer, T...)(auto ref Writer writer, const(char)[] fmt, T args)
 {
     auto fmtspec = FormatSpec!char(fmt);
 
@@ -474,7 +474,7 @@ void showInfo(Info)(string fmtstr, Info[] list, bool dontShowHeader, bool showCo
         }
 
         auto app = appender!string();
-        auto lens = writeValues(app, false, fmt, info.tupleof);
+        auto lens = writeValues(app, fmt, info.tupleof);
         lines ~= app.data;
 
         if(collens.length == 0)
