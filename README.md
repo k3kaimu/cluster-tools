@@ -249,7 +249,7 @@ xsnd13,c222222,aa000
 このとき，`<idx>`が`1`にはユーザー名が，`<idx>`が`2`にはCPU数がそれぞれ対応します．
 
 ```
-$ qshow  --noheader -n --nodefmt='%name:s,%users:-(%(%2$2s*%1$s%),%)'
+$ qshow  --noheader -n --nodefmt='%name:s,%users:(%(%2$2s*%1$s%),%)'
 xsnd00,21*c222222, 4*aa000
 xsnd01,21*c222222, 1*b111111, 4*aa000
 xsnd02, 1*b111111,10*d333333, 3*aa000
