@@ -130,7 +130,7 @@ Job ID      Username    S  tCPU  tMem      rMem      vMem      CPU(%)  CPU Time 
 ### `--jobfmt`
 
 ジョブの情報を表示する際のフォーマットを指定します．  
-デフォルトでは`--jobfmt='%id:10s  %user:10s  %queue:6s  %name:20s  %S:1s  %tcpu:4s  %tmem:8s  %rmem:8s  %vmem:8s  %cpup:6s  %cput:10s  %walltime:10s  %C:1s  %image:20s'`と等価です．  
+デフォルトでは`--jobfmt='%id:10s  %user:10s  %queue:6s  %name:20s  %S:1s  %tcpu:4s  %tmem:8s  %rmem:8s  %vmem:8s  %cpup:6s  %cput:10s  %walltime:10s  %container:1s  %image:20s'`と等価です．  
 使用可能なカラムは次の通りです．
 
   + `id`：ジョブのID
@@ -145,7 +145,6 @@ Job ID      Username    S  tCPU  tMem      rMem      vMem      CPU(%)  CPU Time 
   + `cpup`：ジョブがどれだけCPU負荷をかけているか．最大はtcpu * 100の値
   + `cput`：ジョブが消費したCPU時間
   + `walltime`：ジョブの経過時間
-  + `C`：Dockerの場合`D`，Singularityの場合`S`
   + `container`：Dockerの場合`Docker`，Singularityの場合`Singularity`
   + `image`：実行しているイメージの名前
 
