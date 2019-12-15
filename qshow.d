@@ -96,26 +96,14 @@ size_t[] writeValues(Writer, T...)(auto ref Writer writer, bool leftalign, const
         Lswitch: switch(fmtspec.indexStart) {
           static foreach(i, arg; args) {
             case i+1:
-                typeof(arg) value = arg;
-                static if(is(typeof(arg) : const(char)[])){
-                    fmtspec.flDash = leftalign;
-                    if(fmtspec.width != 0 && arg.length > fmtspec.width)
-                        value = value[0 .. fmtspec.width];
-                }
+                auto app = appender!string();
+                app.writeValue(arg, fmtspec);
+                string str = app.data;
+                if(fmtspec.width != 0)
+                    str = str[0 .. min(fmtspec.width, $)];
 
-                static if(is(typeof(arg) : const(char)[]))
-                {
-                    if(fmtspec.nested is null)
-                        writeLength ~= writeValue(writer, value, fmtspec);
-                    else {
-                        // nodefmtにおけるusersはヘッダの表示時にはただの文字列として表示
-                        writeLength ~= writeValue(writer, value, singleSpec("%s"));
-                    }
-                }
-                else
-                {
-                    writeLength ~= writeValue(writer, value, fmtspec);
-                }
+                writeLength ~= str.length;
+                .put(writer, str);
                 break Lswitch;
           }
 
