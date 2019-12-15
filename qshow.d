@@ -134,9 +134,21 @@ size_t[] writeValues(Writer, T...)(auto ref Writer writer, bool leftalign, const
 }
 
 
-string replaceFmtString(string fmt, in string[] arglist)
+void writeColumnHeader(Writer, T)(auto ref Writer writer, const(char)[] fmt, size_t[] collens)
 {
-    foreach(i, e; arglist)
+    string[] headers = getColumnNames!T();
+
+    auto fmtspec = FormatSpec!char(fmt);
+    while(fmtspec.writeUpToNextSpec(writer)) {
+        auto width = collens[fmtspec.indexStart-1];
+        foreach(i; 0 .. width)
+            .put(writer, header[fmtspec.indexStart-1][0 .. width]);
+    }
+}
+
+string replaceFmtString(T)(string fmt)
+{
+    foreach(i, e; getIdentNames!T)
         fmt = fmt.replace('%' ~ e ~ ':', '%' ~ to!string(i+1) ~ '$');
 
     return fmt;
@@ -219,12 +231,9 @@ immutable defaultShowUsersFmt = "%user:10s  %tjob:4s  %tcpu:4s  %tmem:8s  %rjob:
 immutable defaultShowJobsFmt =  "%id:10s  %user:10s  %queue:6s  %name:20s  %S:1s  %tcpu:4s  %tmem:8s  %rmem:8s  %vmem:8s  %cpup:6s  %cput:10s  %walltime:10s  %container:1s  %image:20s";
 
 
-bool dontShowHeader;
-
-
 void main(string[] args)
 {
-    bool showNodes, showUsers, showJobs, showOnlyMyJobs, showColored;
+    bool showNodes, showUsers, showJobs, showOnlyMyJobs, showColored, dontShowHeader;
     string fmtShowNode = defaultShowNodesFmt;
     string fmtShowUsers = defaultShowUsersFmt;
     string fmtShowJobs = defaultShowJobsFmt;
@@ -275,40 +284,39 @@ void main(string[] args)
 
 
     if(showNodes) {
-        fmtShowNode = fmtShowNode.replaceFmtString(getIdentNames!NodeInfo);
-        showNodeInfo(nodeList, jobList, fmtShowNode, showColored);
+        fmtShowNode = fmtShowNode.replaceFmtString!NodeInfo();
+        auto nodeInfo = makeNodeInfo(nodeList, jobList);
+        showInfo(fmtShowNode, nodeInfo, dontShowHeader, showColored,
+            ColorSetting!NodeInfo(a => a.state != "free" || a.cpu.startsWith("0/") || a.mem.startsWith("0gb/"), fg.red)
+        );
         if(showUsers || showJobs) writeln();
     }
 
     if(showUsers) {
-        fmtShowUsers = fmtShowUsers.replaceFmtString(getIdentNames!UserInfo);
-        showUserInfo(nodeList, jobList, fmtShowUsers, showColored);
+        fmtShowUsers = fmtShowUsers.replaceFmtString!UserInfo();
+        auto userInfo = makeUserInfo(nodeList, jobList);
+        showInfo(fmtShowUsers, userInfo, dontShowHeader, showColored,
+            ColorSetting!UserInfo(a => a.user == environment["USER"], fg.green)
+        );
         if(showJobs) writeln();
     }
 
     if(showJobs) {
-        fmtShowJobs = fmtShowJobs.replaceFmtString(getIdentNames!JobInfo);
-        showJobInfo(nodeList, jobList, fmtShowJobs, showOnlyMyJobs, showColored);
+        fmtShowJobs = fmtShowJobs.replaceFmtString!JobInfo();
+        auto jobInfo = makeJobInfo(nodeList, jobList);
+        if(showOnlyMyJobs)
+            jobInfo = jobInfo.filter!(a => a.user == environment["USER"]).array();
+
+        showInfo(fmtShowJobs, jobInfo, dontShowHeader, showColored,
+            ColorSetting!JobInfo(a => a.user == environment["USER"] && (a.state == "R" || !showOnlyMyJobs) , fg.green)
+        );
     }
 }
 
 
-void showNodeInfo(in JSONValue[] nodeList, in JSONValue[] jobList, string fmtstr, bool showColored)
+NodeInfo[] makeNodeInfo(in JSONValue[] nodeList, in JSONValue[] jobList)
 {
-    if(! dontShowHeader) {
-        writeValues(stdout.lockingTextWriter, true, fmtstr, aliasSeqOf!(getColumnNames!NodeInfo()) );
-        writeln();
-        writeHyphen(stdout.lockingTextWriter, fmtstr);
-        writeln();
-    }
-
-    scope(success) {
-        if(! dontShowHeader) {
-            writeHyphen(stdout.lockingTextWriter, fmtstr);
-            writeln();
-        }
-    }
-
+    NodeInfo[] dst;
     foreach(node; nodeList) {
         NodeInfo info;
         info.vnode = node["key"].str;
@@ -352,37 +360,19 @@ void showNodeInfo(in JSONValue[] nodeList, in JSONValue[] jobList, string fmtstr
         }
 
         info.users = userCPUs.byKeyValue.map!(a => tuple(a.key, a.value)).array();
-
-        auto fmt = fmtstr;
-        if(showColored && (info.state != "free" || info.cpu.startsWith("0/") || info.mem.startsWith("0gb/")) ) {
-            fmt = fmt.color(fg.red);
-        }
-
-        writeValues(stdout.lockingTextWriter, false, fmt, info.tupleof);
-        writeln();
+        dst ~= info;
     }
+
+    return dst;
 }
 
 
-void showUserInfo(in JSONValue[] nodeList, in JSONValue[] jobList, string fmtstr, bool showColored)
+UserInfo[] makeUserInfo(in JSONValue[] nodeList, in JSONValue[] jobList)
 {
     // List of all users
     auto userList = jobList.map!q{a["Variable_List"]["PBS_O_LOGNAME"].str}.array().sort().uniq.array();
 
-    if(! dontShowHeader) {
-        writeValues(stdout.lockingTextWriter, true, fmtstr, aliasSeqOf!(getColumnNames!UserInfo()));
-        writeln();
-        writeHyphen(stdout.lockingTextWriter, fmtstr);
-        writeln();
-    }
-
-    scope(success) {
-        if(! dontShowHeader) {
-            writeHyphen(stdout.lockingTextWriter, fmtstr);
-            writeln();
-        }
-    }
-
+    UserInfo[] dst;
     foreach(user; userList) {
         UserInfo info;
         info.user = user;
@@ -407,34 +397,16 @@ void showUserInfo(in JSONValue[] nodeList, in JSONValue[] jobList, string fmtstr
         info.rcpu = runResource[1];
         info.rmem = runResource[2];
 
-        auto fmt = fmtstr;
-        if(showColored && info.user == environment["USER"])
-            fmt = fmt.color(fg.green);
-
-        writeValues(stdout.lockingTextWriter, false, fmt, info.tupleof);
-        writeln();
+        dst ~= info;
     }
+
+    return dst;
 }
 
 
-void showJobInfo(in JSONValue[] nodeList, in JSONValue[] jobList, string fmtstr, bool showOnlyMyJobs, bool showColored)
+JobInfo[] makeJobInfo(in JSONValue[] nodeList, in JSONValue[] jobList)
 {
-    auto currUser = environment["USER"];
-
-    if(! dontShowHeader) {
-        writeValues(stdout.lockingTextWriter, true, fmtstr, aliasSeqOf!(getColumnNames!JobInfo()));
-        writeln();
-        writeHyphen(stdout.lockingTextWriter, fmtstr);
-        writeln();
-    }
-
-    scope(success) {
-        if(! dontShowHeader) {
-            writeHyphen(stdout.lockingTextWriter, fmtstr);
-            writeln();
-        }
-    }
-
+    JobInfo[] dst;
     foreach(job; jobList.dup.jobSort()) {
         JobInfo info;
         // writeln(job["key"]);
@@ -454,14 +426,6 @@ void showJobInfo(in JSONValue[] nodeList, in JSONValue[] jobList, string fmtstr,
         }
         info.C = info.containerType[0 .. 1];
 
-        // アレイジョブのうち，終わっているジョブの表示はしない
-        if(info.state == "X")
-            continue;
-
-        // -mオプションが渡されたときは自身のジョブ以外は表示しない
-        if(showOnlyMyJobs && info.user != currUser)
-            continue;
-
         info.rmem = "?";
         info.vmem = "?";
         info.cpup = 0;
@@ -475,11 +439,42 @@ void showJobInfo(in JSONValue[] nodeList, in JSONValue[] jobList, string fmtstr,
             info.walltime = job["resources_used"]["walltime"].str;
         }
 
+        dst ~= info;
+    }
+
+    return dst;
+}
+
+
+struct ColorSetting(T)
+{
+    bool delegate(T) pred;
+    typeof(fg.red) color;
+}
+
+
+void showInfo(Info)(string fmtstr, Info[] list, bool dontShowHeader, bool showColored, ColorSetting!Info[] colorSettings...)
+{
+    if(! dontShowHeader) {
+        writeValues(stdout.lockingTextWriter, true, fmtstr, aliasSeqOf!(getColumnNames!Info()) );
+        writeln();
+        writeHyphen(stdout.lockingTextWriter, fmtstr);
+        writeln();
+    }
+
+    scope(success) {
+        if(! dontShowHeader) {
+            writeHyphen(stdout.lockingTextWriter, fmtstr);
+            writeln();
+        }
+    }
+
+    foreach(info; list) {
         auto fmt = fmtstr;
-        if(showColored && showOnlyMyJobs && info.state == "R") {
-            fmt = fmt.color(fg.green);
-        } else if(showColored && !showOnlyMyJobs && info.user == currUser) {
-            fmt = fmt.color(fg.green);
+        foreach(cs; colorSettings) {
+            if(showColored && cs.pred(info)) {
+                fmt = fmt.color(cs.color);
+            }
         }
 
         writeValues(stdout.lockingTextWriter, false, fmt, info.tupleof);
