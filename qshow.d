@@ -59,25 +59,6 @@ auto jobSort(R)(R r)
 }
 
 
-void writeHyphen(Writer)(auto ref Writer writer, const(char)[] fmt)
-{
-    auto fmtspec = FormatSpec!char(fmt);
-
-    while(fmtspec.writeUpToNextSpec(writer)) {
-        size_t width;
-        if(fmtspec.nested) {
-            // usersのため
-            width = 10;
-        }
-        else
-            width = fmtspec.width;
-
-        foreach(i; 0 .. width)
-            .put(writer, '-');
-    }
-}
-
-
 string toCellValue(T)(auto ref T value, auto ref FormatSpec!char fmtspec)
 {
     auto app = appender!string;
