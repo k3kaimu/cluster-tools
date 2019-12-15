@@ -96,7 +96,7 @@ Job ID      Username    S  tCPU  tMem      rMem      vMem      CPU(%)  CPU Time 
 ### `--nodefmt`
 
 ノードの情報を表示する際のフォーマットを指定します．  
-デフォルトでは`--nodefmt='%name:6s  %state:8s  %njobs:5s  %cpu:9s  %mem:11s  %gpu:3s  %users:-(%(%7s*%2d%), %)'`と等価です．  
+デフォルトでは`--nodefmt='%name:6s  %state:-8s  %njobs:5s  %cpu:9s  %mem:11s  %gpu:3s  %users:-(%(%7s*%2d%), %)'`と等価です．  
 使用可能なカラムは次の通りです．
 
   + `name`：ノード名
@@ -113,7 +113,7 @@ Job ID      Username    S  tCPU  tMem      rMem      vMem      CPU(%)  CPU Time 
 ### `--userfmt`
 
 ユーザーの情報を表示する際のフォーマットを指定します．  
-デフォルトでは`--userfmt='%user:10s  %tjob:4s  %tcpu:4s  %tmem:8s  %rjob:4s  %rcpu:4s  %rmem:8s'`と等価です．  
+デフォルトでは`--userfmt='%user:-10s  %tjob:4s  %tcpu:4s  %tmem:8s  %rjob:4s  %rcpu:4s  %rmem:8s'`と等価です．  
 使用可能なカラムは次の通りです．
 
   + `user`：ユーザー名
@@ -130,7 +130,7 @@ Job ID      Username    S  tCPU  tMem      rMem      vMem      CPU(%)  CPU Time 
 ### `--jobfmt`
 
 ジョブの情報を表示する際のフォーマットを指定します．  
-デフォルトでは`--jobfmt='%id:10s  %user:10s  %queue:6s  %name:20s  %S:1s  %tcpu:4s  %tmem:8s  %rmem:8s  %vmem:8s  %cpup:6s  %cput:10s  %walltime:10s  %container:1s  %image:20s'`と等価です．  
+デフォルトでは`--jobfmt='%id:-10s  %user:-10s  %queue:-6s  %name:-20s  %S:1s  %tcpu:4s  %tmem:8s  %rmem:8s  %vmem:8s  %cpup:6s  %cput:10s  %walltime:10s  %container:1s  %image:-20s'`と等価です．  
 使用可能なカラムは次の通りです．
 
   + `id`：ジョブのID
@@ -155,8 +155,8 @@ Job ID      Username    S  tCPU  tMem      rMem      vMem      CPU(%)  CPU Time 
 
 qshowではオプションの`--nodefmt`，`--userfmt`，`--jobfmt`を与えることで表示する情報のフォーマットを変えることができます．
 フォーマット指定文字列はC言語のように`%`から始まる記法になっています．
-より詳細には，`%{column-name}:{column-width}{fmt-spec}`となっており，`{column-name}`はカラム名，`{column-width}`はカラムの文字数，`{fmt-spec}`は`s`などのフォーマット指定子です．
-`{column-width}`が指定されていない場合は表示する文字列の長さは無制限であると解釈します．
+より詳細には，`%{column-name}:{fmt-spec}`となっており，`{column-name}`はカラム名，`{fmt-spec}`は`-10s`などのフォーマット指定子です．
+また，例えばフォーマット指定子`{fmt-spec}`が`-10s`のとき，文字列は最大10文字で切り捨てられ，10文字以下の文字列は左詰めされます．
 
 たとえば，次の例では各ノードのノード名（6文字まで）と割り当てられているジョブの数（4文字まで）を表示します．
 また，二つのカラムの間には四つの半角スペースを挿入しています．
