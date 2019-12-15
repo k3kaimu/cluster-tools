@@ -59,9 +59,10 @@ auto jobSort(R)(R r)
 }
 
 
-string toCellValue(T)(auto ref T value, auto ref FormatSpec!char fmtspec)
+string toCellValue(T)(auto ref T value, FormatSpec!char fmtspec)
 {
     auto app = appender!string;
+    fmtspec.flPlus = false;
     app.formatValue(value, fmtspec);
 
     string str = app.data;
@@ -113,7 +114,7 @@ void writeTableRow(Writer)(auto ref Writer writer, const(char)[] fmt, string[] v
         ++index;
 
         // padding left
-        if(!fmtspec.flDash && width > v.length) .put(writer, ' '.repeat(width - v.length));
+        if(fmtspec.flPlus && width > v.length) .put(writer, ' '.repeat(width - v.length));
 
         .put(writer, v[0 .. min(width, $)]);
 
@@ -206,7 +207,7 @@ struct UserInfo
 
 struct JobInfo
 {
-    @InfoTag("id",         "Job ID")        string id;
+    @InfoTag("id",         "JobID")         string id;
     @InfoTag("user",       "Username")      string user;
     @InfoTag("S",          "S")             string state;
     @InfoTag("tcpu",       "tCPU")          long tcpu;
@@ -247,7 +248,7 @@ string[] getColumnNames(T)()
 
 immutable defaultShowNodesFmt = "%name:6s  %state:-8s  %njobs:5s  %cpu:9s  %mem:11s  %gpu:3s  %users:-(%(%7s*%2d%), %)";
 immutable defaultShowUsersFmt = "%user:-10s  %tjob:4s  %tcpu:4s  %tmem:8s  %rjob:4s  %rcpu:4s  %rmem:8s";
-immutable defaultShowJobsFmt =  "%id:-10s  %user:-10s  %queue:-6s  %name:-20s  %S:1s  %tcpu:4s  %tmem:8s  %rmem:8s  %vmem:8s  %cpup:6s  %cput:10s  %walltime:10s  %container:1s  %image:-20s";
+immutable defaultShowJobsFmt =  "%id:-s  %user:-s  %queue:-6s  %name:-s  %S:1s  %tcpu:4s  %tmem:8s  %rmem:8s  %vmem:8s  %cpup:6s  %cput:10s  %walltime:10s  %container:1s  %image:-s";
 
 
 void main(string[] args)

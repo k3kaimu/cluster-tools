@@ -130,7 +130,7 @@ Job ID      Username    S  tCPU  tMem      rMem      vMem      CPU(%)  CPU Time 
 ### `--jobfmt`
 
 ジョブの情報を表示する際のフォーマットを指定します．  
-デフォルトでは`--jobfmt='%id:-10s  %user:-10s  %queue:-6s  %name:-20s  %S:1s  %tcpu:4s  %tmem:8s  %rmem:8s  %vmem:8s  %cpup:6s  %cput:10s  %walltime:10s  %container:1s  %image:-20s'`と等価です．  
+デフォルトでは`--jobfmt='%id:-s  %user:-s  %queue:-6s  %name:-s  %S:1s  %tcpu:4s  %tmem:8s  %rmem:8s  %vmem:8s  %cpup:6s  %cput:10s  %walltime:10s  %container:1s  %image:-s'`と等価です．  
 使用可能なカラムは次の通りです．
 
   + `id`：ジョブのID
@@ -156,7 +156,27 @@ Job ID      Username    S  tCPU  tMem      rMem      vMem      CPU(%)  CPU Time 
 qshowではオプションの`--nodefmt`，`--userfmt`，`--jobfmt`を与えることで表示する情報のフォーマットを変えることができます．
 フォーマット指定文字列はC言語のように`%`から始まる記法になっています．
 より詳細には，`%{column-name}:{fmt-spec}`となっており，`{column-name}`はカラム名，`{fmt-spec}`は`-10s`などのフォーマット指定子です．
-また，例えばフォーマット指定子`{fmt-spec}`が`-10s`のとき，文字列は最大10文字で切り捨てられ，10文字以下の文字列は左詰めされます．
+
+フォーマット指定子`{fmt-spec}`は基本的にはC言語のフォーマット指定子とは少し異なっています．
+フォーマット指定子`{fmt-spec}`は`{fmt-align}{fmt-width}{fmt-type}`の三つの要素から構成されます．
+
++ `{fmt-align}`
+  文字列を右詰めするか（`+`），左詰めするか（`-`）を指定します．
+  デフォルトでは右詰め（`+`）になっています．
+
+
++ `{fmt-width}`
+  出力される文字列の**最大文字数**．これ以上の文字列は切り落とされます．
+  指定されない場合，無制限に文字列を出力します．
+
+
++ `{fmt-type}`
+  - `s`：すべての型で利用できます．基本的にはこれを用いると良いでしょう．
+  - `d`：整数
+
+
+例えばフォーマット指定子`{fmt-spec}`が`-10s`のとき，**文字列は最大10文字で切り捨てられ**，10文字以下の文字列は左詰めされます．
+
 
 たとえば，次の例では各ノードのノード名（6文字まで）と割り当てられているジョブの数（4文字まで）を表示します．
 また，二つのカラムの間には四つの半角スペースを挿入しています．
@@ -208,7 +228,7 @@ xsnd13,0
 以下の例は，各ノードの名前とジョブを実行しているユーザーをカンマ区切りで表示します．
 
 ```sh
-$ qshow  --noheader -n --nodefmt='%name:s,%users:-(%(%s%),%)'
+$ qshow  --noheader -n --nodefmt='%name:s,%users:(%(%s%),%)'
 xsnd00,c222222,aa000
 xsnd01,c222222,b111111,aa000
 xsnd02,b111111,d333333,aa000
