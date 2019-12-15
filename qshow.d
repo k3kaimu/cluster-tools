@@ -7,7 +7,7 @@
 }
 +/
 import std;
-import colorize;
+import colorize : color, fg;
 
 
 auto removeArrayJobParent(R)(R r)
@@ -364,7 +364,7 @@ NodeInfo[] makeNodeInfo(in JSONValue[] nodeList, in JSONValue[] jobList)
                 // MPIなどで複数ノードにまたがるジョブの処理
                 // exec_vnodeには (xsnd03:mem=1234kb:ncpus=1)+(xsnd04:mem=1234kb:ncpus=1)+(xsnd07:mem=1234kb:ncpus=1)+(xsnd08:mem=1234kb:ncpus=1)
                 // のような値が入っているのでこれを集計する
-                auto resourceList = jobinfo["exec_vnode"].str.split("+").map!"a[1..$-1]".find!(a => a.startsWith(name));
+                auto resourceList = jobinfo["exec_vnode"].str.split("+").map!"a[1..$-1]".find!(a => a.startsWith(info.vnode));
                 if(resourceList.empty)
                     continue;
 
