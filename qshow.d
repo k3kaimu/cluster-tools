@@ -110,7 +110,14 @@ void writeValues(Writer, T...)(auto ref Writer writer, bool leftalign, const(cha
           }
 
             default:
-                enforce(0, "フォーマット`%s`が不正です．インデックスは1--%sの範囲で指定してください．".format(fmtspec, args.length));
+                // writefln!"'%s'"(fmt[0 .. $ - fmtspec.trailing.length])
+                stderr.writefln!"Format error:"();
+                stderr.writefln!"Input: %s"(fmt);
+                stderr.writef  !"Error: "();
+                foreach(i; 0 .. fmt.length - fmtspec.trailing.length)
+                    stderr.write(' ');
+                stderr.writeln('^');
+                enforce(0, "フォーマットが不正です");
         }
     }
 }
