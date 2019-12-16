@@ -59,32 +59,68 @@ auto jobSort(R)(R r)
 }
 
 
+string aligning(const(char)[] str, bool left, bool right, size_t width)
+{
+    if(width == 0)
+        return str.dup;
+
+    auto app = appender!string();
+    ptrdiff_t pad = cast(ptrdiff_t)width - cast(ptrdiff_t)str.length;
+
+    if(right && pad > 0) .put(app, ' '.repeat(pad));
+    .put(app, str);
+    if(left && pad > 0) .put(app, ' '.repeat(pad));
+
+    string newstr = app.data;
+    newstr = newstr[0 .. min(width, $)];
+
+    return newstr;
+}
+
+
 string toCellValue(T)(auto ref T value, FormatSpec!char fmtspec)
 {
     auto app = appender!string;
-    fmtspec.flPlus = false;
-    app.formatValue(value, fmtspec);
 
-    string str = app.data;
-    if(fmtspec.width != 0)
-        str = str[0 .. min(fmtspec.width, $)];
+    if(fmtspec.nested.length != 0 && fmtspec.flHash) {
+        // 名前あり%#(...%)フォーマット
+        app.formattedWrite(fmtspec.nested, forward!value);
+    } else {
+        fmtspec.flPlus = false;
+        app.formatValue(value, fmtspec);
+    }
 
+    string str = app.data.aligning(fmtspec.flDash, !fmtspec.flDash, fmtspec.width);
     return str;
 }
 
 
-string[] toCellValues(T...)(const(char)[] fmt, T args)
+string[] toCellValues(Writer, T...)(auto ref Writer writer, const(char)[] fmt, auto ref T args)
 {
-    auto nullsink = appender!string();
     auto fmtspec = FormatSpec!char(fmt);
 
     string[] dst;
-    while(fmtspec.writeUpToNextSpec(nullsink)) {
+    while(fmtspec.writeUpToNextSpec(writer)) {
+        scope(exit) {
+            fmtspec.indexStart = 0; // initialize
+        }
+
+        if(fmtspec.indexStart == 0 && fmtspec.nested.length != 0 && fmtspec.flHash) {
+            // 名前無し%#(...%)フォーマットの場合
+            auto app = appender!string();
+            toCellValues(app, fmtspec.nested, forward!args);
+            auto str = app.data.aligning(fmtspec.flDash, !fmtspec.flDash, fmtspec.width);
+            dst ~= str;
+            .put(writer, str);
+            continue;
+        }
+
         Lswitch: switch(fmtspec.indexStart) {
           static foreach(i, arg; args) {
             case i+1:
                 string str = toCellValue(arg, fmtspec);
                 dst ~= str;
+                .put(writer, str);
                 break Lswitch;
           }
 
@@ -113,13 +149,7 @@ void writeTableRow(Writer)(auto ref Writer writer, const(char)[] fmt, string[] v
         string v = values[index];
         ++index;
 
-        // padding left
-        if(fmtspec.flPlus && width > v.length) .put(writer, ' '.repeat(width - v.length));
-
-        .put(writer, v[0 .. min(width, $)]);
-
-        // padding right
-        if(fmtspec.flDash && width > v.length) .put(writer, ' '.repeat(width - v.length));
+        .put(writer, v.aligning(fmtspec.flDash, fmtspec.flPlus, width));
     }
 }
 
@@ -131,7 +161,16 @@ size_t[] writeColumnHeader(T, Writer)(auto ref Writer writer, const(char)[] fmt,
     size_t[] writeCollens;
     auto fmtspec = FormatSpec!char(fmt);
     while(fmtspec.writeUpToNextSpec(writer)) {
-        string h = headers[fmtspec.indexStart-1];
+        scope(exit) {
+            fmtspec.indexStart = 0; // initialize
+        }
+
+        const(char)[] h;
+        if(fmtspec.indexStart > 0) {
+            h = headers[fmtspec.indexStart-1];
+        } else if(fmtspec.nested.length != 0 && fmtspec.flHash) {
+            h = fmtspec.sep;
+        }
 
         size_t width = 0;
         if(collens.empty) {
@@ -146,8 +185,7 @@ size_t[] writeColumnHeader(T, Writer)(auto ref Writer writer, const(char)[] fmt,
 
         writeCollens ~= width;
 
-        .put(writer, h[0 .. min(width, $)]);
-        if(width > h.length) .put(writer, ' '.repeat(width - h.length));
+        .put(writer, h.aligning(true, false, width));
     }
 
     return writeCollens;
@@ -485,7 +523,8 @@ void showInfo(Info)(string fmtstr, Info[] list, bool dontShowHeader, bool showCo
             }
         }
 
-        rows ~= toCellValues(fmt, info.tupleof);
+        auto nullsink = appender!string();
+        rows ~= toCellValues(nullsink, fmt, info.tupleof);
 
         if(collens.length == 0)
             collens = rows[0].map!"a.length".array;
