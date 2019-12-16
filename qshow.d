@@ -290,7 +290,7 @@ string[] getColumnNames(T)()
 
 immutable defaultShowNodesFmt = "%name:6s  %state:-8s  %njobs:5s  %cpu:9s  %mem:11s  %gpu:3s  %users:-(%(%7s*%2d%), %)";
 immutable defaultShowUsersFmt = "%user:-10s  %tjob:4s  %tcpu:4s  %tmem:8s  %rjob:4s  %rcpu:4s  %rmem:8s";
-immutable defaultShowJobsFmt =  "%id:-s  %user:-s  %queue:-6s  %name:-s  %S:1s  %tcpu:4s  %tmem:8s  %rmem:8s  %vmem:8s  %cpup:6s  %cput:10s  %walltime:10s  %container:1s  %image:-s";
+immutable defaultShowJobsFmt =  "%id:-s  %user:-s  %queue:-6s  %name:-s  %S:1s  %tcpu:4s  %tmem:8s  %rmem:8s  %vmem:8s  %cpup:6s  %cput:10s  %walltime:10s  %#-(%container:1s:%image:s%|Container%)";
 
 
 void main(string[] args)
