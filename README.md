@@ -130,7 +130,7 @@ Job ID      Username    S  tCPU  tMem      rMem      vMem      CPU(%)  CPU Time 
 ### `--jobfmt`
 
 ジョブの情報を表示する際のフォーマットを指定します．  
-デフォルトでは`--jobfmt='%id:-s  %user:-s  %queue:-6s  %name:-s  %S:1s  %tcpu:4s  %tmem:8s  %rmem:8s  %vmem:8s  %#6(%cpup:4s%%%|CPU%%%)  %cput:10s  %walltime:10s  %#-(%container:1s:%image:s%|Container%)'`と等価です．  
+デフォルトでは`--jobfmt='%id:-s  %user:-s  %queue:-6s  %name:-s  %S:1s  %tcpu:4s  %tmem:8s  %rmem:8s  %vmem:8s  %#6(%cpup:5s%%%|CPU%%%)  %cput:10s  %walltime:10s  %#-(%container:1s/%image:s%|Container%)'`と等価です．  
 使用可能なカラムは次の通りです．
 
   + `id`：ジョブのID
