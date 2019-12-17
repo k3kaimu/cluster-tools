@@ -82,13 +82,8 @@ string toCellValue(T)(auto ref T value, FormatSpec!char fmtspec)
 {
     auto app = appender!string;
 
-    if(fmtspec.nested.length != 0 && fmtspec.flHash) {
-        // 名前あり%#(...%)フォーマット
-        toCellValues(app, fmtspec.nested, forward!value);
-    } else {
-        fmtspec.flPlus = false;
-        app.formatValue(value, fmtspec);
-    }
+    fmtspec.flPlus = false;
+    app.formatValue(value, fmtspec);
 
     string str = app.data.aligning(fmtspec.flDash, !fmtspec.flDash, fmtspec.width);
     return str;
@@ -103,10 +98,6 @@ string[] toCellValues(Writer, T...)(auto ref Writer writer, const(char)[] fmt, a
     while(fmtspec.writeUpToNextSpec(writer)) {
         scope(exit) {
             fmtspec.indexStart = 0; // initialize
-        }
-
-        if(T.length == 1) {
-            fmtspec.indexStart = 1;
         }
 
         if(fmtspec.indexStart == 0 && fmtspec.nested.length != 0 && fmtspec.flHash) {
