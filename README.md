@@ -274,7 +274,7 @@ xsnd13,21*c222222, 7*aa000
 また，カラムの値は15文字で切り捨てられ，そのカラムのヘッダーには`Container`と表示されます．
 
 ```sh
-$ qshow -j --jobfmt='%#-15(%container:1s/%image:s%|S Container%)'
+$ qshow -j --jobfmt='%#-15(%container:1s/%image:s%|Container%)'
 Container      
 ---------------
 S/imc.tut.ac.jp
