@@ -130,7 +130,7 @@ Job ID      Username    S  tCPU  tMem      rMem      vMem      CPU(%)  CPU Time 
 ### `--jobfmt`
 
 ジョブの情報を表示する際のフォーマットを指定します．  
-デフォルトでは`--jobfmt='%id:-s  %user:-s  %queue:-6s  %name:-s  %S:1s  %tcpu:4s  %tmem:8s  %rmem:8s  %vmem:8s  %cpup:6s  %cput:10s  %walltime:10s  %container:1s  %image:-s'`と等価です．  
+デフォルトでは`--jobfmt='%id:-s  %user:-s  %queue:-6s  %name:-s  %S:1s  %tcpu:4s  %tmem:8s  %rmem:8s  %vmem:8s  %#6(%cpup:4s%%%|CPU%%%)  %cput:10s  %walltime:10s  %#-(%container:1s:%image:s%|Container%)'`と等価です．  
 使用可能なカラムは次の通りです．
 
   + `id`：ジョブのID
@@ -157,7 +157,7 @@ qshowではオプションの`--nodefmt`，`--userfmt`，`--jobfmt`を与える�
 フォーマット指定文字列はC言語のように`%`から始まる記法になっています．
 より詳細には，`%{column-name}:{fmt-spec}`となっており，`{column-name}`はカラム名，`{fmt-spec}`は`-10s`などのフォーマット指定子です．
 
-フォーマット指定子`{fmt-spec}`は基本的にはC言語のフォーマット指定子とは少し異なっています．
+フォーマット指定子`{fmt-spec}`は基本的にはC言語のフォーマット指定子ですが，少し異なっています．
 フォーマット指定子`{fmt-spec}`は`{fmt-align}{fmt-width}{fmt-type}`の三つの要素から構成されます．
 
 + `{fmt-align}`
@@ -248,7 +248,7 @@ xsnd13,c222222,aa000
 また，`cpu*user`と表示するには，`%1$s`と`%2$2s`のように`%<idx>$<fmt>`とし，次のように指定します．
 このとき，`<idx>`が`1`にはユーザー名が，`<idx>`が`2`にはCPU数がそれぞれ対応します．
 
-```
+```sh
 $ qshow  --noheader -n --nodefmt='%name:s,%users:(%(%2$2s*%1$s%),%)'
 xsnd00,21*c222222, 4*aa000
 xsnd01,21*c222222, 1*b111111, 4*aa000
@@ -265,6 +265,55 @@ xsnd11,21*c222222, 7*aa000
 xsnd12,21*c222222, 7*aa000
 xsnd13,21*c222222, 7*aa000
 ```
+
+
+### 複合カラムフォーマット（v1.5.0以降）
+
+フォーマットにカラム名が指定されておらず，`%#{fmt-align}{fmt-width}({fmt-nested}%|{fmt-column-name}%)`のようになっているとき，`{fmt-nested}`で`{fmt-column-name}`という名前の単一のカラムを形成するようになります．
+たとえば，ジョブ情報の出力において`%#-15(%container:1s/%image:s%|Container%)`というフォーマットは，コンテナランタイムの種類の1文字（`%container:1s`）とコンテナイメージ名（`%image:s`）を`/`で区切り出力したものが単一のカラムになります．
+また，カラムの値は15文字で切り捨てられ，そのカラムのヘッダーには`Container`と表示されます．
+
+```sh
+$ qshow -j --jobfmt='%#-15(%container:1s/%image:s%|S Container%)'
+Container      
+---------------
+S/imc.tut.ac.jp
+D/prg-env:2019.
+D/prg-env:2019.
+D/prg-env:2019.
+D/prg-env:2019.
+D/prg-env:2019.
+D/prg-env:2019.
+D/prg-env:2019.
+D/prg-env:2019.
+D/prg-env:2019.
+S/imc.tut.ac.jp
+S/imc.tut.ac.jp
+---------------
+```
+
+カラムに単位を付ける用途にも利用できます．
+以下の例ではCPU利用率の末尾に`%`を付加しています．
+
+```sh
+bash-4.2$ qshow -j --jobfmt='%#(%cpup:4s %%%|CPU(%%)%)'
+CPU(%)
+------
+   4 %
+  98 %
+  75 %
+  98 %
+  95 %
+ 150 %
+  97 %
+  96 %
+  96 %
+ 150 %
+2570 %
+2581 %
+------
+```
+
 
 
 ## ビルド
