@@ -90,7 +90,7 @@ string toCellValue(T)(auto ref T value, FormatSpec!char fmtspec)
 }
 
 
-string[] toCellValues(Writer, T...)(auto ref Writer writer, const(char)[] fmt, auto ref T args)
+string[] toCellValues(Writer, Info)(auto ref Writer writer, const(char)[] fmt, Info info)
 {
     auto fmtspec = FormatSpec!char(fmt);
 
@@ -103,7 +103,7 @@ string[] toCellValues(Writer, T...)(auto ref Writer writer, const(char)[] fmt, a
         if(fmtspec.indexStart == 0 && fmtspec.nested.length != 0 && fmtspec.flHash) {
             // 名前無し%#(...%)フォーマットの場合
             auto app = appender!string();
-            toCellValues(app, fmtspec.nested, forward!args);
+            toCellValues(app, fmtspec.nested, info);
             auto str = app.data.aligning(fmtspec.flDash, !fmtspec.flDash, fmtspec.width);
             dst ~= str;
             .put(writer, str);
@@ -111,9 +111,9 @@ string[] toCellValues(Writer, T...)(auto ref Writer writer, const(char)[] fmt, a
         }
 
         Lswitch: switch(fmtspec.indexStart) {
-          static foreach(i, arg; args) {
+          static foreach(i, value; info.tupleof) {
             case i+1:
-                string str = toCellValue(arg, fmtspec);
+                string str = toCellValue(value, fmtspec);
                 dst ~= str;
                 .put(writer, str);
                 break Lswitch;
@@ -519,7 +519,7 @@ void showInfo(Info)(string fmtstr, Info[] list, bool dontShowHeader, bool showCo
         }
 
         auto nullsink = appender!string();
-        rows ~= toCellValues(nullsink, fmt, info.tupleof);
+        rows ~= toCellValues(nullsink, fmt, info);
 
         if(collens.length == 0)
             collens = rows[0].map!"a.length".array;
