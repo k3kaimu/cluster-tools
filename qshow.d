@@ -111,9 +111,9 @@ string[] toCellValues(Writer, Info)(auto ref Writer writer, const(char)[] fmt, I
         }
 
         Lswitch: switch(fmtspec.indexStart) {
-          static foreach(i, value; info.tupleof) {
+          static foreach(i, T; typeof(info.tupleof)) {
             case i+1:
-                string str = toCellValue(value, fmtspec);
+                string str = toCellValue(info.tupleof[i], fmtspec);
                 dst ~= str;
                 .put(writer, str);
                 break Lswitch;
