@@ -484,7 +484,7 @@ JobInfo[] makeJobInfo(in JSONValue[] nodeList, in JSONValue[] jobList)
         info.cpup = 0;
         info.cputime = "----:--:--";
         info.walltime = "----:--:--";
-        if(info.state == "R") {
+        if(info.state == "R" && "resources_used" in job) {
             info.rmem = job["resources_used"]["mem"].str.toGB;
             info.vmem = job["resources_used"]["vmem"].str.toGB;
             info.cpup = job["resources_used"]["cpupercent"].integer;
