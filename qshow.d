@@ -327,6 +327,8 @@ void main(string[] args)
         return a.value;
     }).array().sort!q{a["key"].str < b["key"].str}.array();
 
+    fixJobListOfNodes(nodeList);
+
     auto qstatResult = execute(["qstat", "-ft", "-F", "json"]);
     enforce(qstatResult.status == 0, "`qstat -ft -F json` is failed.");
 
@@ -543,5 +545,23 @@ void showInfo(Info)(string fmtstr, Info[] list, bool dontShowHeader, bool showCo
     if(! dontShowHeader) {
         writeColumnHyphen!Info(stdout.lockingTextWriter, fmtstr, collens);
         writeln();
+    }
+}
+
+
+// pbsnodes -aSjだとjobsが壊れていることがあるのでそれを修正する
+void fixJobListOfNodes(JSONValue[] nodes)
+{
+    // -aのみの出力を利用する
+    auto pbsnodes_a = execute(["pbsnodes", "-a", "-F", "json"]);
+    enforce(pbsnodes_a.status == 0, "`pbsnodes -a` is failed.");
+
+    JSONValue[string] altNodeInfos = pbsnodes_a.output.parseJSON()["nodes"].object;
+
+    foreach(node; nodes) {
+        if(auto paltnode = node["key"].str in altNodeInfos) {
+            if("jobs" in (*paltnode))
+                node["jobs"] = (*paltnode)["jobs"];
+        }
     }
 }
