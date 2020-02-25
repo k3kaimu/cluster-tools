@@ -332,10 +332,13 @@ void main(string[] args)
     auto qstatResult = execute(["qstat", "-ft", "-F", "json"]);
     enforce(qstatResult.status == 0, "`qstat -ft -F json` is failed.");
 
-    auto jobList = qstatResult.output.parseJSON()["Jobs"].object.byKeyValue.map!((a){
-        a.value["key"] = a.key.replace(".xregistry0", "");
-        return a.value;
-    }).removeArrayJobParent.array();
+    JSONValue[] jobList;
+    if(auto pjobs = "Jobs" in qstatResult.output.parseJSON().object) {
+        jobList = pjobs.object.byKeyValue.map!((a){
+            a.value["key"] = a.key.replace(".xregistry0", "");
+            return a.value;
+        }).removeArrayJobParent.array();
+    }
 
 
     if(showNodes) {
